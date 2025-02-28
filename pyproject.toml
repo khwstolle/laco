@@ -1,0 +1,153 @@
+[build-system]
+requires = ["setuptools>=75", "setuptools-scm>=8", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+keywords = [
+    "perception",
+    "computer vision",
+    "deep learning",
+    "object detection",
+    "instance segmentation",
+    "semantic segmentation",
+]
+name = "laco"
+description = "Lazy configurations for reproducible deep learning experiments."
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [{ name = "Kurt Stolle", email = "kurt@khws.io" }]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "omegaconf",
+    "setuptools",
+    "regex",
+    "hydra-core",
+    "iopathlib",
+    "pytest-benchmark>=5.1.0",
+    "pytest-coverage>=0.0",
+    "wandb>=0.19.6",
+]
+dynamic = ["version"]
+
+[project.entry-points.console_scripts]
+laco = "laco.cli:main"
+
+[project.entry-points.iopathlib]
+laco = "laco.handlers:LacoHandler"
+
+[project.entry-points.laco]
+wandb = "laco.readers.wandb:read_config"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+laco = ["py.typed", "*.pyc", "*.pyi"]
+
+[tool.setuptools.packages.find]
+where = ["sources"]
+include = ["*"]
+exclude = ["tests", "__pycache__"]
+namespaces = true
+
+[dependency-groups]
+dev = [
+    "hypothesis",
+    "bandit[toml]",
+    "check-manifest",
+    "ruff",
+    "pre-commit",
+    "pytest",
+    "pytest-sugar",
+    "pytest-xdist",
+    "pytest-benchmark",
+    "pytest-cov",
+    "pytest-mock",
+    "pytest-runner",
+    "mccabe",
+]
+doc = ["sphinx", "sphinx-rtd-theme", "numpydoc"]
+
+[tool.pytest.ini_options]
+addopts = "--doctest-modules -m 'not integration' -m 'not gpu' --benchmark-disable"
+pythonpath = ["sources"]
+testpaths = "tests"
+junit_family = "xunit2"
+junit_suite_name = "tests"
+markers = [
+    "integration: marks as integration test",
+    "notebooks: marks as notebook test",
+    "gpu: marks as gpu test",
+    "slow: marks tests as slow",
+    "unit: fast offline tests",
+]
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+fail_under = 100
+
+[tool.pyright]
+pythonPlatform = "Linux"
+pythonVersion = "3.12"
+include = ["sources"]
+executionEnvironments = [{ root = "sources" }]
+reportImplicitOverride = "warning"
+reportImportCycles = true
+reportMatchNotExhaustive = true
+reportMissingImports = true
+reportMissingTypeStubs = "none"
+reportPrivateImportUsage = "none"
+reportShadowedImports = true
+reportUnusedImport = "none"
+reportUnusedVariable = "none"
+strictListInference = true
+strictSetInference = true
+
+[tool.ruff]
+target-version = 'py312'
+line-length = 88
+fix = true
+
+[tool.ruff.lint]
+select = [
+    "F",    # PyFlakes
+    "E",    # Pycodestyle errors
+    "W",    # Pycodestyle warnings
+    "B",    # Bugbear
+    "C90",  # McCabe Complexity
+    "I",    # isort
+    "C4",   # Comprehensions
+    "EM",   # Error message 
+    "ICN",  # Import conventions
+    "G",    # Logging format
+    "PGH",  # Pygrep
+    "Q",    # Quotes
+    "PIE",  # PIE
+    "PL",   # Pylint
+    "PT",   # Pytest style
+    "PTH",  # Pathlib
+    "RET",  # Return
+    "SIM",  # Simplify
+    "UP",   # Pyupgrade
+    "FURB", # Refurb
+    "PYI",  # Pyi
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = ["F403", "F401"]
+"**/__init__.pyi" = ["F403", "F401"]
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
