@@ -56,7 +56,7 @@ def instantiate(cfg: typing.Any, /) -> object:  # noqa: C901, PLR0912
         callable.
     - Other keys define the keyword arguments to be passed to the callable.
     """
-    import laco.env
+    import laco._env
     import laco.keys
     import laco.utils
 
@@ -75,7 +75,7 @@ def instantiate(cfg: typing.Any, /) -> object:  # noqa: C901, PLR0912
     ):
         return cfg  # type: ignore[return-value]
 
-    if laco.env.fetch(bool, "LACO_TRACE", default=False):
+    if laco.get_env(bool, "LACO_TRACE", default=False):
         logging.getLogger(__name__).info(
             "Instantiating %s", pprint.pprint(omegaconf.OmegaConf.to_container(cfg))
         )

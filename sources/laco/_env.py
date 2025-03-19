@@ -8,7 +8,7 @@ import os
 import typing
 
 
-__all__ = ["fetch", "EnvFilter"]
+__all__ = ["get_env", "EnvFilter"]
 
 type EnvVarCompatible = int | str | bool
 
@@ -51,7 +51,7 @@ class EnvFilter(enum.StrEnum):
 
 
 @typing.overload
-def fetch[_T: EnvVarCompatible](
+def get_env[_T: EnvVarCompatible](
     __type: type[_T],
     /,
     *keys: str,
@@ -61,7 +61,7 @@ def fetch[_T: EnvVarCompatible](
 
 
 @typing.overload
-def fetch[_T: EnvVarCompatible](
+def get_env[_T: EnvVarCompatible](
     __type: type[_T],
     /,
     *keys: str,
@@ -71,7 +71,7 @@ def fetch[_T: EnvVarCompatible](
 
 
 @functools.cache
-def fetch[_T: EnvVarCompatible](
+def get_env[_T: EnvVarCompatible](
     __type: type[_T],
     /,
     *keys: str,

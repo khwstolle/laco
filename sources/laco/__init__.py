@@ -6,8 +6,9 @@ from ._lazy import *
 from ._loader import *
 from ._overrides import *
 from ._resolvers import *
+from ._env import *
 
-__lazy__ = ("env", "language", "builtins", "cli", "env", "handler", "keys", "utils", "handler")
+__lazy__ = ("language", "builtins", "cli", "handler", "keys", "utils", "handler")
 
 
 def __getattr__(name: str):
