@@ -1,6 +1,5 @@
 import builtins
 import os
-import pathlib
 import typing
 from contextlib import contextmanager
 from uuid import uuid4
@@ -13,31 +12,10 @@ from laco.language import ParamsWrapper
 
 from .utils import as_omegadict, check_syntax
 
-__all__ = ["load", "load_remote", "load_local"]
+__all__ = ["load"]
 
 
 PATCH_PREFIX: typing.Final = "_laco_"
-
-
-def load_remote(path: str):
-    """
-    Load a configuration from a remote source. Currently accepted external configuration
-    sources are:
-
-    - `Weights & Biases <https://wandb.ai/>`_ runs: ``wandb-run://<run_id>``
-    """
-    from unipercept.engine.integrations.wandb_integration import WANDB_RUN_PREFIX
-    from unipercept.engine.integrations.wandb_integration import (
-        read_run as wandb_read_run,
-    )
-
-    if path.startswith(WANDB_RUN_PREFIX):
-        run = wandb_read_run(path)
-        cfg = DictConfig(run.config)
-    else:
-        raise FileNotFoundError(path)
-
-    return cfg
 
 
 @contextmanager
@@ -107,7 +85,7 @@ def _patch_import():  # noqa: C901
     builtins.__import__ = import_default
 
 
-def load_local(path: str):
+def load(path: str):
     """
     Loads a configuration from a local source.
 
@@ -204,9 +182,3 @@ def _generate_packagename(path: str):
     # generate a random package name when loading config files
     return PATCH_PREFIX + str(uuid4())[:4] + "." + iopathlib.Path(path).name
 
-
-def load(path: str | os.PathLike | pathlib.Path):
-    """
-    Loads a configuration from a local or remote source.
-    """
-    return load_local(path)
