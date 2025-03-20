@@ -1,3 +1,5 @@
+import pathlib
+
 import laco
 import laco.examples.mlp
 import torch.nn
@@ -5,7 +7,7 @@ from omegaconf import DictConfig
 
 
 def test_mlp_example():
-    cfg = laco.load(laco.examples.mlp.__file__)
+    cfg = laco.load(pathlib.Path(laco.__file__).parent / "examples" / "mlp.py")
     assert isinstance(cfg, DictConfig)
     print(cfg)
 

@@ -1,5 +1,6 @@
 import builtins
 import os
+import pathlib
 import typing
 from contextlib import contextmanager
 from uuid import uuid4
@@ -85,7 +86,7 @@ def _patch_import():  # noqa: C901
     builtins.__import__ = import_default
 
 
-def load(path: str):
+def load(path: str | pathlib.Path | os.PathLike) -> DictConfig:
     """
     Loads a configuration from a local source.
 
@@ -95,6 +96,8 @@ def load(path: str):
     import laco
     import laco.keys
     import laco.utils
+
+    path = iopathlib.get_local_path(path)
 
     ext = os.path.splitext(path)[1]  # noqa: PTH122
     match ext.lower():
@@ -132,7 +135,6 @@ def load(path: str):
                             | float
                             | str
                             | bool,
-
                         )
                         or v is None
                     )
@@ -158,12 +160,12 @@ def load(path: str):
     return laco.utils.as_omegadict(obj)
 
 
-def _filepath_to_name(path: str | iopathlib.Path) -> str | None:
+def _filepath_to_name(path: str | pathlib.Path | os.PathLike) -> str | None:
     """
     Convert a file path to a module name.
     """
 
-    configs_root = iopathlib.Path("./configs").resolve()
+    configs_root = pathlib.Path("./configs").resolve()
     path = iopathlib.Path(path).resolve()
     try:
         name = path.relative_to(configs_root).parent.as_posix() + "/" + path.stem
@@ -180,5 +182,4 @@ def _filepath_to_name(path: str | iopathlib.Path) -> str | None:
 
 def _generate_packagename(path: str):
     # generate a random package name when loading config files
-    return PATCH_PREFIX + str(uuid4())[:4] + "." + iopathlib.Path(path).name
-
+    return PATCH_PREFIX + str(uuid4())[:4] + "." + pathlib.Path(path).name
