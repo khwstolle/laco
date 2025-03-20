@@ -43,7 +43,7 @@ def test_env_float_ninf():
 def test_env_invalid(dtype, value):
     env = "TEST_ENV_FLOAT_INVALID"
     os.environ[env] = "invalid"
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError):  # noqa: PT011
         get_env(float, env)
     del os.environ[env]
 

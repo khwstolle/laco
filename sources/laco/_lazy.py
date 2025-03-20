@@ -117,7 +117,10 @@ def instantiate(cfg: typing.Any, /) -> object:  # noqa: C901, PLR0912
 
         cfg_args = cfg.pop(laco.keys.LAZY_ARGS, ())
         if not isinstance(cfg_args, typing.Sequence):
-            msg = f"Expected sequence for {laco.keys.LAZY_ARGS}, but got {type(cfg_args)}!"
+            msg = (
+                f"Expected sequence for {laco.keys.LAZY_ARGS}, "
+                f"but got {type(cfg_args)}!"
+            )
             raise TypeError(msg)
 
         try:

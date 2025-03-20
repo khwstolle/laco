@@ -1,5 +1,6 @@
 import laco
 import laco.examples.mlp
+import torch.nn
 from omegaconf import DictConfig
 
 
@@ -9,5 +10,5 @@ def test_mlp_example():
     print(cfg)
 
     mlp = laco.instantiate(cfg.MLP)
-    assert mlp is not None
+    assert isinstance(mlp, torch.nn.Sequential)
     print(mlp)
