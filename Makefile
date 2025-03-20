@@ -24,7 +24,7 @@ install:
 	uv pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation ./
 
 check:
-	uvx ruff check --fix .
+	uv run ruff check --fix .
 
 test: check
 	uv run pytest -s -v -n auto --dist=loadfile --junitxml=tests.xml --no-cov --benchmark-disable
