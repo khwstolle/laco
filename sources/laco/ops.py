@@ -1,11 +1,9 @@
+import copy
 import functools
 import typing
-from dataclasses import is_dataclass
 
-from omegaconf import DictConfig
-
-import laco.utils 
 import laco.keys
+import laco.utils
 
 
 def partial(
@@ -18,3 +16,12 @@ def partial(
         msg = f"Expected a callable object or location (str), got {cb} (type {type(cb)}"
         raise TypeError(msg)
     return functools.partial(cb, **kwargs)
+
+def repeat[_O: typing.MutableSequence](num: int, src: _O) -> _O:
+    dst: list[_O] = []
+    for _ in range(num):
+        dst.append(copy.deepcopy(src))
+    tgt, *other = dst
+    for mod in other:
+        tgt.append(mod)
+    return tgt

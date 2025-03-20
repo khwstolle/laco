@@ -1,8 +1,8 @@
-from math import isnan
 import os
+from math import isnan
 
 import pytest
-import laco.env
+from laco._env import get_env
 
 
 @pytest.mark.parametrize(
@@ -11,28 +11,28 @@ import laco.env
 def test_env_atomic(dtype, value):
     env = f"TEST_ENV_{dtype.__name__.upper()}_{value}"
     os.environ[env] = str(value)
-    assert laco.get_env(dtype, env) == value
+    assert get_env(dtype, env) == value
     del os.environ[env]
 
 
 def test_env_float_nan():
     env = "TEST_ENV_FLOAT_NAN"
     os.environ[env] = "nan"
-    assert isnan(laco.get_env(float, env))
+    assert isnan(get_env(float, env))
     del os.environ[env]
 
 
 def test_env_float_inf():
     env = "TEST_ENV_FLOAT_INF"
     os.environ[env] = "inf"
-    assert laco.get_env(float, env) == float("inf")
+    assert get_env(float, env) == float("inf")
     del os.environ[env]
 
 
 def test_env_float_ninf():
     env = "TEST_ENV_FLOAT_NINF"
     os.environ[env] = "-inf"
-    assert laco.get_env(float, env) == float("-inf")
+    assert get_env(float, env) == float("-inf")
     del os.environ[env]
 
 
@@ -44,7 +44,7 @@ def test_env_invalid(dtype, value):
     env = "TEST_ENV_FLOAT_INVALID"
     os.environ[env] = "invalid"
     with pytest.raises(ValueError):
-        laco.get_env(float, env)
+        get_env(float, env)
     del os.environ[env]
 
 
@@ -52,7 +52,7 @@ def test_env_invalid(dtype, value):
 def test_env_bool_true(value):
     env = f"TEST_ENV_BOOL_TRUE_{value}"
     os.environ[env] = value
-    assert laco.get_env(bool, env) is True
+    assert get_env(bool, env) is True
     del os.environ[env]
 
 
@@ -60,5 +60,5 @@ def test_env_bool_true(value):
 def test_env_bool_false(value):
     env = f"TEST_ENV_BOOL_FALSE_{value}"
     os.environ[env] = value
-    assert laco.get_env(bool, env) is False
+    assert get_env(bool, env) is False
     del os.environ[env]

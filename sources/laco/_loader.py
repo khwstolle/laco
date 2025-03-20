@@ -1,5 +1,6 @@
 import builtins
 import os
+import pathlib
 import typing
 from contextlib import contextmanager
 from uuid import uuid4
@@ -8,13 +9,17 @@ import iopathlib
 import yaml
 from omegaconf import DictConfig, ListConfig
 
-__all__ = ["load_config_remote", "load_config_local"]
+from laco.language import ParamsWrapper
+
+from .utils import as_omegadict, check_syntax
+
+__all__ = ["load", "load_remote", "load_local"]
 
 
 PATCH_PREFIX: typing.Final = "_laco_"
 
 
-def load_config_remote(path: str):
+def load_remote(path: str):
     """
     Load a configuration from a remote source. Currently accepted external configuration
     sources are:
@@ -82,7 +87,7 @@ def _patch_import():  # noqa: C901
             and (globals.get("__package__", "") or "").startswith(PATCH_PREFIX)
         ):
             cur_file = find_relative(globals["__file__"], name, level)
-            laco.utils.check_syntax(cur_file)
+            check_syntax(cur_file)
             spec = importlib.machinery.ModuleSpec(
                 _generate_packagename(cur_file), None, origin=cur_file
             )
@@ -92,7 +97,7 @@ def _patch_import():  # noqa: C901
                 content = f.read()
             exec(compile(content, cur_file, "exec"), module.__dict__)
             for name in fromlist:  # noqa: PLR1704
-                val = laco.utils.as_omegadict(module.__dict__[name])
+                val = as_omegadict(module.__dict__[name])
                 module.__dict__[name] = val
             return module
         return import_default(name, globals, locals, fromlist=fromlist, level=level)
@@ -102,7 +107,7 @@ def _patch_import():  # noqa: C901
     builtins.__import__ = import_default
 
 
-def load_config_local(path: str):
+def load_local(path: str):
     """
     Loads a configuration from a local source.
 
@@ -141,6 +146,7 @@ def load_config_local(path: str):
                         isinstance(
                             v,
                             dict
+                            | ParamsWrapper
                             | list
                             | DictConfig
                             | ListConfig
@@ -148,12 +154,17 @@ def load_config_local(path: str):
                             | float
                             | str
                             | bool,
+
                         )
                         or v is None
                     )
                 ),
             )
-            obj: dict[str, typing.Any] = {k: v for k, v in nsp.items() if k in export}
+            obj: dict[str, typing.Any] = {
+                k: v() if isinstance(v, ParamsWrapper) else v
+                for k, v in nsp.items()
+                if k in export
+            }
             obj.setdefault(laco.keys.CONFIG_NAME, _filepath_to_name(path))
             obj.setdefault(laco.keys.CONFIG_VERSION, laco.__version__)
 
@@ -192,3 +203,10 @@ def _filepath_to_name(path: str | iopathlib.Path) -> str | None:
 def _generate_packagename(path: str):
     # generate a random package name when loading config files
     return PATCH_PREFIX + str(uuid4())[:4] + "." + iopathlib.Path(path).name
+
+
+def load(path: str | os.PathLike | pathlib.Path):
+    """
+    Loads a configuration from a local or remote source.
+    """
+    return load_local(path)

@@ -7,7 +7,6 @@ import functools
 import os
 import typing
 
-
 __all__ = ["get_env", "EnvFilter"]
 
 type EnvVarCompatible = int | str | bool

@@ -32,8 +32,6 @@ dependencies = [
     "regex",
     "hydra-core",
     "iopathlib",
-    "pytest-benchmark>=5.1.0",
-    "pytest-coverage>=0.0",
     "wandb>=0.19.6",
 ]
 dynamic = ["version"]
@@ -73,6 +71,7 @@ dev = [
     "pytest-cov",
     "pytest-mock",
     "pytest-runner",
+    "pytest-coverage",
     "mccabe",
 ]
 doc = ["sphinx", "sphinx-rtd-theme", "numpydoc"]

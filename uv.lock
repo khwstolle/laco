@@ -509,14 +509,11 @@ wheels = [
 
 [[package]]
 name = "laco"
-version = "0.0.2"
 source = { editable = "." }
 dependencies = [
     { name = "hydra-core" },
     { name = "iopathlib" },
     { name = "omegaconf" },
-    { name = "pytest-benchmark" },
-    { name = "pytest-coverage" },
     { name = "regex" },
     { name = "setuptools" },
     { name = "wandb" },
@@ -532,6 +529,7 @@ dev = [
     { name = "pytest" },
     { name = "pytest-benchmark" },
     { name = "pytest-cov" },
+    { name = "pytest-coverage" },
     { name = "pytest-mock" },
     { name = "pytest-runner" },
     { name = "pytest-sugar" },
@@ -549,8 +547,6 @@ requires-dist = [
     { name = "hydra-core" },
     { name = "iopathlib" },
     { name = "omegaconf" },
-    { name = "pytest-benchmark", specifier = ">=5.1.0" },
-    { name = "pytest-coverage", specifier = ">=0.0" },
     { name = "regex" },
     { name = "setuptools" },
     { name = "wandb", specifier = ">=0.19.6" },
@@ -566,6 +562,7 @@ dev = [
     { name = "pytest" },
     { name = "pytest-benchmark" },
     { name = "pytest-cov" },
+    { name = "pytest-coverage" },
     { name = "pytest-mock" },
     { name = "pytest-runner" },
     { name = "pytest-sugar" },

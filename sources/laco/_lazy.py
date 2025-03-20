@@ -11,7 +11,6 @@ import typing
 import omegaconf
 from omegaconf import DictConfig, ListConfig
 
-
 __all__ = [
     "instantiate",
 ]

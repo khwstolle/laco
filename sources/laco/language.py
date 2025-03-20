@@ -1,7 +1,6 @@
 import abc
 import functools
 import typing
-import copy
 import warnings
 from collections.abc import Callable
 from dataclasses import is_dataclass
@@ -10,6 +9,7 @@ import omegaconf
 import regex as re
 from omegaconf import DictConfig
 
+from laco import ops
 
 __all__ = [
     "call",
@@ -29,7 +29,9 @@ __all__ = [
 # --------------- #
 
 
-def call[**_P, _L](target: Callable[_P, _L], *, reserved_ok: typing.Collection[str] = ()) -> Callable[_P, _L]:
+def call[**_P, _L](
+    target: Callable[_P, _L], *, reserved_ok: typing.Collection[str] = ()
+) -> Callable[_P, _L]:
     import laco.keys
     import laco.utils
 
@@ -38,7 +40,10 @@ def call[**_P, _L](target: Callable[_P, _L], *, reserved_ok: typing.Collection[s
 
     @functools.wraps(target)
     def wrap(*args: _P.args, **kwargs: _P.kwargs) -> DictConfig:
-        resv_keys_used = set(laco.keys.LazyKey.__members__.values()).difference(reserved_ok) & kwargs.keys()
+        resv_keys_used = (
+            set(laco.keys.LazyKey.__members__.values()).difference(reserved_ok)
+            & kwargs.keys()
+        )
         if resv_keys_used:
             msg = f"Reserved keys found in kwargs: {resv_keys_used}"
             raise ValueError(msg)
@@ -75,6 +80,7 @@ def pairs(
     Key-value pairs from a configuration node, where special keys are ignored.
     """
     import laco.keys
+
     if not isinstance(node, DictConfig):
         msg = f"Expected a configuration node, got {node=} (type {type(node)})!"
         raise TypeError(msg)
@@ -143,27 +149,21 @@ def partial(func: Callable[..., typing.Any], /) -> Callable[..., typing.Any]:
     callable
         A lazy callable object that is forwarded to ``functools.partial``.
     """
-    import laco.builtins 
     import laco.keys
+    import laco.ops
 
     def wrapper(**kwargs):
         if laco.keys.LAZY_PART in kwargs:
             msg = f"Reserved key {laco.keys.LAZY_PART!r} found in arguments!"
             raise ValueError(msg)
         kwargs[laco.keys.LAZY_PART] = func
-        return call(laco.builtins.partial, reserved_ok={laco.keys.LazyKey.PARTIAL})(**kwargs)
+        return call(laco.ops.partial, reserved_ok={laco.keys.LazyKey.PARTIAL})(**kwargs)
 
     return wrapper
 
 
 def repeat[_O: typing.MutableSequence](num: int, src: _O) -> _O:
-    dst: list[_O] = []
-    for _ in range(num):
-        dst.append(copy.deepcopy(src))
-    tgt, *other = dst
-    for mod in other:
-        tgt.append(mod)
-    return tgt
+    return call(ops.repeat)(num=num, src=src)  # type: ignore[no-any-return]
 
 
 # ------ #
@@ -319,4 +319,5 @@ def params[_T](cls: type[_T]) -> type[_T]:
 
     This is useful for typing in configuration objects.
     """
+
     return typing.cast(type[_T], ParamsWrapper(cls))

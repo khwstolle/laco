@@ -22,5 +22,5 @@ def test_language_partial(value):
     lc = L.partial(target_callable)()
 
     assert isinstance(lc, O.DictConfig), type(lc)
-    assert lc[laco.keys.LAZY_CALL] == laco.builtins.partial, lc
+    assert lc[laco.keys.LAZY_CALL] is laco.ops.partial, lc
     assert lc[laco.keys.LAZY_PART] is target_callable, lc
