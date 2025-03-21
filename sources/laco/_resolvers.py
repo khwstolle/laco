@@ -4,6 +4,7 @@ from omegaconf import OmegaConf
 
 __all__ = []
 
+
 OmegaConf.register_new_resolver("sum", lambda *numbers: sum(numbers))
 OmegaConf.register_new_resolver("min", lambda *numbers: min(numbers))
 OmegaConf.register_new_resolver("max", lambda *numbers: max(numbers))

@@ -1,11 +1,13 @@
-"""
-Lazy configuration system, inspired by and based on Detectron2 and Hydra.
+r"""Laco
+========
+
+LAzy COnfiguration (LACO) system, inspired by and based on Detectron2 and Hydra.
 """
 
-from . import cli, handler, keys, language, ops, utils
+from . import keys, utils
 from ._env import *
+from ._io import *
 from ._lazy import *
-from ._loader import *
 from ._overrides import *
 from ._resolvers import *
 
@@ -18,7 +20,7 @@ def __getattr__(name: str):
     if name == "__version__":
         try:
             return version(__name__)
-        except PackageNotFoundError:
+        except PackageNotFoundError:  # pragma: no cover
             return "unknown"
     msg = f"Module {__name__!r} has no attribute {name!r}"
     raise AttributeError(msg)

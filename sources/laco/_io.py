@@ -1,19 +1,23 @@
 import builtins
+import dataclasses
+import io
 import os
 import pathlib
+import pprint
 import typing
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
+from copy import deepcopy
 from uuid import uuid4
 
 import iopathlib
 import yaml
-from omegaconf import DictConfig, ListConfig
+from omegaconf import DictConfig, ListConfig, OmegaConf, SCMode
 
-from laco.language import ParamsWrapper
-
+from . import keys, utils
+from .language import ParamsWrapper
 from .utils import as_omegadict, check_syntax
 
-__all__ = ["load"]
+__all__ = ["load", "dump", "save"]
 
 
 PATCH_PREFIX: typing.Final = "_laco_"
@@ -86,13 +90,32 @@ def _patch_import():  # noqa: C901
     builtins.__import__ = import_default
 
 
-def load(path: str | pathlib.Path | os.PathLike) -> DictConfig:
+def _filepath_to_name(path: str | pathlib.Path | os.PathLike) -> str | None:
     """
-    Loads a configuration from a local source.
+    Convert a file path to a module name.
+    """
 
-    Users should prefer to load configurations via the unified API with
-    :func:`unipercept.read_config` instead of calling this method directly.
-    """
+    configs_root = pathlib.Path("./configs").resolve()
+    path = iopathlib.Path(path).resolve()
+    try:
+        name = "/".join((path.relative_to(configs_root).parent.as_posix(), path.stem))
+    except Exception:
+        name = "/".join([path.parent.stem, path.stem])
+
+    name = name.replace("./", "")
+    name = name.replace("//", "/")
+
+    if name in {"__init__", "defaults", "unknown", "config", "configs"}:
+        return None
+    return name.removesuffix(".py")
+
+
+def _generate_packagename(path: str):
+    return PATCH_PREFIX + str(uuid4())[:4] + "." + pathlib.Path(path).name
+
+
+def load(path: str | pathlib.Path | os.PathLike) -> DictConfig:
+    """Loads a configuration from a local source."""
     import laco
     import laco.keys
     import laco.utils
@@ -160,26 +183,122 @@ def load(path: str | pathlib.Path | os.PathLike) -> DictConfig:
     return laco.utils.as_omegadict(obj)
 
 
-def _filepath_to_name(path: str | pathlib.Path | os.PathLike) -> str | None:
-    """
-    Convert a file path to a module name.
-    """
+@typing.overload
+def dump(cfg: object, fh: None = None) -> str: ...
 
-    configs_root = pathlib.Path("./configs").resolve()
-    path = iopathlib.Path(path).resolve()
+
+@typing.overload
+def dump(cfg: object, fh: io.StringIO) -> None: ...
+
+
+def dump(cfg: object, fh: io.StringIO | None = None) -> str | None:
+    r"""Dump configuration file to YAML format.
+
+    Parameters
+    ----------
+    cfg
+        An omegaconf config object.
+    fh
+        A file handle to write the config to. If None, a string will be returned.
+
+    Returns
+    -------
+    str
+        The dumped config file in YAML format.
+    """
+    if not isinstance(cfg, DictConfig):
+        cfg = utils.as_omegadict(
+            dataclasses.asdict(cfg) if dataclasses.is_dataclass(cfg) else cfg  # type: ignore[arg-type]
+        )
     try:
-        name = path.relative_to(configs_root).parent.as_posix() + "/" + path.stem
+        cfg = deepcopy(cfg)
     except Exception:
-        name = "/".join([path.parent.stem, path.stem])
+        pass
+    else:
 
-    name = name.replace("./", "")
-    name = name.replace("//", "/")
+        def _replace_type_by_name(x):
+            if keys.LAZY_CALL in x and callable(x._target_):
+                with suppress(AttributeError):
+                    x._target_ = utils.generate_path(x._target_)
 
-    if name in {"__init__", "defaults", "unknown", "config", "configs"}:
+        utils.apply_recursive(cfg, _replace_type_by_name)
+
+    try:
+        cfg_as_dict = OmegaConf.to_container(
+            cfg,
+            # Do not resolve interpolation when saving, i.e. do not turn ${a} into
+            # actual values when saving.
+            resolve=False,
+            # Save structures (dataclasses) in a format that can be instantiated later.
+            # Without this option, the type information of the dataclass will be erased.
+            structured_config_mode=SCMode.INSTANTIATE,
+        )
+    except Exception as err:
+        cfg_pretty = pprint.pformat(OmegaConf.to_container(cfg)).replace("\n", "\n\t")
+        msg = f"Config cannot be converted to a dict!\n\nConfig node:\n{cfg_pretty}"
+        raise ValueError(msg) from err
+
+    dump_kwargs = {"default_flow_style": None, "allow_unicode": True}
+
+    def _find_undumpable(cfg_as_dict, *, _key=()) -> tuple[str, ...] | None:
+        for key, value in cfg_as_dict.items():
+            if not isinstance(value, dict):
+                continue
+            try:
+                _ = yaml.dump(value, **dump_kwargs)
+                continue
+            except Exception:
+                pass
+            key_with_error = _find_undumpable(value, _key=_key + (key,))
+            if key_with_error:
+                return key_with_error
+            return _key + (key,)
         return None
-    return name.removesuffix(".py")
+
+    try:
+        dumped = yaml.dump(cfg_as_dict, fh, **dump_kwargs)
+    except Exception as err:
+        cfg_pretty = pprint.pformat(cfg_as_dict).replace("\n", "\n\t")
+        problem_key = _find_undumpable(cfg_as_dict)
+        if problem_key:
+            problem_key = ".".join(problem_key)
+            msg = f"Config cannot be saved due to key {problem_key!r}"
+        else:
+            msg = "Config cannot be saved due to an unknown entry"
+        msg += f"\n\nConfig node:\n\t{cfg_pretty}"
+        raise SyntaxError(msg) from err
+
+    return dumped
 
 
-def _generate_packagename(path: str):
-    # generate a random package name when loading config files
-    return PATCH_PREFIX + str(uuid4())[:4] + "." + pathlib.Path(path).name
+def save[ConfigType: object | DictConfig](
+    cfg: ConfigType, path: str | pathlib.Path | os.PathLike, *, reload: bool = True
+) -> ConfigType | DictConfig:
+    """
+    Save a config object to a yaml file.
+
+    Parameters
+    ----------
+    cfg
+        An omegaconf config object.
+    path
+        The file path to save the config file.
+    reload
+        If True, reload the file (for validation) after saving.
+
+    Returns
+    -------
+    ConfigType
+        The saved config object. If `reload` is True, the reloaded config object is
+        returned.
+
+    Raises
+    ------
+    AssertionError
+        If the config cannot be dumped or the post-save check fails.
+    """
+    dumped = dump(cfg)
+    with iopathlib.open(path, "w") as fh:  # noqa: PTH123
+        fh.write(dumped)
+
+    return load(path) if reload else cfg

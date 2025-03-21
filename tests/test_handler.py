@@ -1,4 +1,5 @@
 import laco
+import laco.handler
 import pytest
 
 

@@ -27,9 +27,10 @@ class EnvFilter(enum.StrEnum):
             return True
         if v is None:
             return False
-        match EnvFilter(f):
+        match f:
             case EnvFilter.STRING:
-                assert isinstance(v, str)
+                if not isinstance(v, str):
+                    return False
                 v = v.lower()
                 return v != ""
             case EnvFilter.TRUTHY:
@@ -37,13 +38,13 @@ class EnvFilter(enum.StrEnum):
             case EnvFilter.FALSY:
                 return not bool(v)
             case EnvFilter.POSITIVE:
-                return v > 0
+                return float(v) > 0
             case EnvFilter.NEGATIVE:
-                return v < 0
+                return float(v) < 0
             case EnvFilter.NONNEGATIVE:
-                return v >= 0
+                return float(v) >= 0
             case EnvFilter.NONPOSITIVE:
-                return v <= 0
+                return float(v) <= 0
             case _:
                 msg = f"Invalid filter: {f!r}"
                 raise ValueError(msg)
