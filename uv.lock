@@ -317,13 +317,13 @@ wheels = [
 
 [[package]]
 name = "iopathlib"
-version = "0.0.4"
+version = "0.0.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "tqdm" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8b/a7/f1b0ad3e5a3f666fc77022ab3db112e44fa3f9bcd7a6ecdbc640daa19648/iopathlib-0.0.4-cp313-none-any.whl", hash = "sha256:79936ae84e7e7f926f5d5e0695e8aec4f1325301ff645c9664eb4331bd361c63", size = 58914 },
+    { url = "https://files.pythonhosted.org/packages/df/14/532c04de9c517c16f7292ef06707dc7701f19e9580902dab88b6f50ee309/iopathlib-0.0.5-cp313-none-any.whl", hash = "sha256:f8be3342ba52128642a5d7e6659f2038c85290812398eedf913dd6a68e3a7357", size = 55509 },
 ]
 
 [[package]]
@@ -376,7 +376,7 @@ doc = [
 [package.metadata]
 requires-dist = [
     { name = "hydra-core" },
-    { name = "iopathlib", specifier = ">=0.0.4" },
+    { name = "iopathlib", specifier = ">=0.0.5" },
     { name = "omegaconf" },
     { name = "regex" },
     { name = "setuptools" },

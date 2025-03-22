@@ -30,7 +30,7 @@ dependencies = [
     "setuptools",
     "regex",
     "hydra-core",
-    "iopathlib>=0.0.4",
+    "iopathlib>=0.0.5",
     "wandb>=0.19.6",
 ]
 dynamic = ["version"]

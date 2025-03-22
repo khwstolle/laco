@@ -96,7 +96,7 @@ def _filepath_to_name(path: str | pathlib.Path | os.PathLike) -> str | None:
     """
 
     configs_root = pathlib.Path("./configs").resolve()
-    path = iopathlib.Path(path).resolve()
+    path = iopathlib.locate(path).resolve()
     try:
         name = "/".join((path.relative_to(configs_root).parent.as_posix(), path.stem))
     except Exception:
@@ -120,7 +120,7 @@ def load(path: str | pathlib.Path | os.PathLike) -> DictConfig:
     import laco.keys
     import laco.utils
 
-    path = iopathlib.get_local_path(path)
+    path = iopathlib.locate(path)
 
     ext = os.path.splitext(path)[1]  # noqa: PTH122
     match ext.lower():
@@ -138,7 +138,7 @@ def load(path: str | pathlib.Path | os.PathLike) -> DictConfig:
                 # Compile first with filename to:
                 # 1. make filename appears in stacktrace
                 # 2. make load_rel able to find its parent's (possibly remote) location
-                exec(compile(content, iopathlib.get_local_path(path), "exec"), nsp)
+                exec(compile(content, iopathlib.locate(path), "exec"), nsp)
 
             export = nsp.get(
                 "__all__",
