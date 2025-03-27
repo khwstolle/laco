@@ -12,20 +12,19 @@ import types
 import typing
 from collections.abc import Callable
 
-import iopathlib
+import expath
 from omegaconf import DictConfig, ListConfig
 
 
-def check_syntax(filename: str):
+def check_syntax(path: expath.PathType):
     """
     Validate the syntax of a Python-based configuration file.
     """
-    with iopathlib.open(filename, "r") as f:
-        content = f.read()
+    content = expath.locate(path).read_text()
     try:
         ast.parse(content)
     except SyntaxError as e:
-        msg = f"Config file {filename} has syntax error!"
+        msg = f"Config file {path} has syntax error!"
         raise SyntaxError(msg) from e
 
 

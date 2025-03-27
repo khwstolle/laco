@@ -14,12 +14,12 @@ keywords = [
 name = "laco"
 description = "Lazy configurations for reproducible deep learning experiments."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 authors = [{ name = "Kurt Stolle", email = "kurt@khws.io" }]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: Implementation :: CPython",
     "Operating System :: OS Independent",
     "Intended Audience :: Developers",
@@ -30,19 +30,21 @@ dependencies = [
     "setuptools",
     "regex",
     "hydra-core",
-    "iopathlib>=0.0.5",
+    "expath>=0.0.5",
     "wandb>=0.19.6",
 ]
-dynamic = ["version"]
+#dynamic = ["version"]
+version = "0.0.6"
+
 
 [project.entry-points.console_scripts]
 laco = "laco.cli:main"
 
-[project.entry-points.iopathlib]
-laco = "laco.handlers:LacoHandler"
+[project.entry-points.expath]
+configs = "laco.handler:ConfigsPathHandler"
 
-[project.entry-points.laco]
-wandb = "laco.readers.wandb:read_config"
+[project.entry-points.configs]
+examples = "laco.examples"
 
 [tool.setuptools]
 include-package-data = true
@@ -57,12 +59,9 @@ exclude = ["tests", "__pycache__"]
 namespaces = true
 
 [dependency-groups]
-dev = [
-    "hypothesis",
-    "bandit[toml]",
-    "check-manifest",
-    "ruff",
-    "pre-commit",
+dev = ["hypothesis", "bandit[toml]", "check-manifest", "ruff", "mccabe"]
+doc = ["sphinx", "sphinx-rtd-theme", "numpydoc"]
+test = [
     "pytest",
     "pytest-sugar",
     "pytest-xdist",
@@ -71,12 +70,12 @@ dev = [
     "pytest-mock",
     "pytest-runner",
     "pytest-coverage",
-    "mccabe",
+    "torch",
+    "hypothesis",
 ]
-doc = ["sphinx", "sphinx-rtd-theme", "numpydoc"]
 
 [tool.pytest.ini_options]
-addopts = "--doctest-modules -m 'not integration' -m 'not gpu' --benchmark-disable --cov=laco --cov-report=html --cov-report=xml"
+addopts = "--doctest-modules -m 'not integration' -m 'not gpu' --benchmark-disable --cov=sources --cov-report=html --cov-report=xml"
 pythonpath = ["sources"]
 testpaths = "tests"
 junit_family = "xunit2"
@@ -97,7 +96,7 @@ fail_under = 50
 
 [tool.pyright]
 pythonPlatform = "Linux"
-pythonVersion = "3.13"
+pythonVersion = "3.12"
 include = ["sources"]
 executionEnvironments = [{ root = "sources" }]
 reportImplicitOverride = "warning"

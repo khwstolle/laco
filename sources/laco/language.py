@@ -1,4 +1,5 @@
 import abc
+import collections
 import functools
 import typing
 import warnings
@@ -18,6 +19,7 @@ __all__ = [
     "ref",
     "partial",
     "Dict",
+    "OrderedDict",
     "Set",
     "Tuple",
     "List",
@@ -30,8 +32,24 @@ __all__ = [
 
 
 def call[**_P, _L](
-    target: Callable[_P, _L], *, reserved_ok: typing.Collection[str] = ()
+    target: Callable[_P, _L],
+    *,
+    reserved_ok: typing.Collection[str] = (),
+    expand_args: bool = False,
 ) -> Callable[_P, _L]:
+    r"""Peform a lazy call to a function or class.
+
+    Parameters
+    ----------
+    target : callable
+        The target function or class to call.
+    reserved_ok : collection of str
+        A collection of reserved keys that are allowed in the kwargs.
+    expand_args : bool
+        Whether to expand the first positional argument as *args. If True, only one
+        positional argument is allowed, and it will be expanded as *args. If False, the
+        first and second positional arguments are passed as *args.
+    """
     import laco.keys
     import laco.utils
 
@@ -54,7 +72,17 @@ def call[**_P, _L](
         else:
             node[laco.keys.LAZY_CALL] = target
         if args and len(args) > 0:
-            node[laco.keys.LAZY_ARGS] = tuple(args)
+            if expand_args:
+                lazy_args, *remaining_args = args
+                if len(remaining_args) > 0:
+                    msg = (
+                        f"Only one positional argument is allowed when {expand_args=}!"
+                        f" Got {len(args)} arguments."
+                    )
+                    raise ValueError(msg)
+            else:
+                lazy_args = tuple(args)
+            node[laco.keys.LAZY_ARGS] = lazy_args
 
         node.update(kwargs)
 
@@ -162,7 +190,7 @@ def partial(func: Callable[..., typing.Any], /) -> Callable[..., typing.Any]:
     return wrapper
 
 
-def repeat[_O: typing.MutableSequence](num: int, src: _O) -> _O:
+def repeat[_O](num: int, src: _O) -> list[_O]:
     return call(ops.repeat)(num=num, src=src)  # type: ignore[no-any-return]
 
 
@@ -225,6 +253,13 @@ class Dict[_T](_KeywordMacro[dict[str, _T]]):
     @classmethod
     def target(cls, **kwargs: _T):
         return dict(kwargs.items())
+
+
+class OrderedDict[_T](_PositionalMacro[collections.OrderedDict[str, _T]]):
+    @typing.override
+    @classmethod
+    def target(cls, items: list[tuple[str, _T]]):
+        return collections.OrderedDict(items)
 
 
 class DictFromItems[_T](_PositionalMacro[dict[str, _T]]):

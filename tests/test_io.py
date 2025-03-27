@@ -1,13 +1,9 @@
-import json
-import os
-
 import laco
 import pytest
-
 from omegaconf import OmegaConf
 
 
-@pytest.fixture()
+@pytest.fixture
 def config():
     config = OmegaConf.create()
     config.foo = "bar"
@@ -29,7 +25,7 @@ def test_dump(config):
 def test_save_load(config, tmp_path):
     # Save the config to a file
     file_path = tmp_path / "config.yaml"
-    config_saved = laco.save(config, file_path, reload=False)
+    config_saved = laco.save(config, file_path, mode=laco.SaveMode.NO_RELOAD)
     assert config_saved == config, (
         "Saved config should match the original without reload"
     )
@@ -39,9 +35,19 @@ def test_save_load(config, tmp_path):
     with file_path.open("w") as fh:
         fh.write("xxx")
     assert file_path.read_text() == "xxx"
-    
+
     # Override the file, and check if the new content is valid (and thus written)
-    config_reload = laco.save(config, file_path, reload=True)
+    config_reload = laco.save(config, file_path)
     assert hash(config_reload) != hash(config)
     assert file_path.is_file()
     assert file_path.read_text() != "xxx"
+
+
+def test_load_mode():
+    assert laco.LoadMode.DEFAULT == 0, laco.LoadMode
+    assert laco.LoadMode.NO_CHECK == 1, laco.LoadMode
+    assert laco.LoadMode.NO_PARSE == 2, laco.LoadMode
+
+
+def test_save_mode():
+    assert laco.SaveMode.DEFAULT == 0, laco.SaveMode

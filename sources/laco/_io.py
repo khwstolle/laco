@@ -1,5 +1,6 @@
 import builtins
 import dataclasses
+import enum
 import io
 import os
 import pathlib
@@ -7,18 +8,19 @@ import pprint
 import typing
 from contextlib import contextmanager, suppress
 from copy import deepcopy
+from urllib.parse import urlparse
 from uuid import uuid4
 
-import iopathlib
+import expath
 import yaml
 from omegaconf import DictConfig, ListConfig, OmegaConf, SCMode
 
 from . import keys, utils
+from ._overrides import apply_overrides
 from .language import ParamsWrapper
 from .utils import as_omegadict, check_syntax
 
-__all__ = ["load", "dump", "save"]
-
+__all__ = ["load", "LoadMode", "dump", "save", "SaveMode"]
 
 PATCH_PREFIX: typing.Final = "_laco_"
 
@@ -49,9 +51,9 @@ def _patch_import():  # noqa: C901
             cur_file = os.path.join(cur_file, part)  # noqa: PTH118
         if not cur_file.endswith(".py"):
             cur_file += ".py"
-        if not iopathlib.isfile(cur_file):
+        if not expath.isfile(cur_file):
             cur_file_no_suffix = cur_file[: -len(".py")]
-            if iopathlib.isdir(cur_file_no_suffix):
+            if expath.isdir(cur_file_no_suffix):
                 raise ImportError(
                     f"Cannot import from {cur_file_no_suffix}." + relative_import_err
                 )
@@ -76,7 +78,7 @@ def _patch_import():  # noqa: C901
             )
             module = importlib.util.module_from_spec(spec)
             module.__file__ = cur_file
-            with iopathlib.open(cur_file) as f:
+            with expath.open(cur_file) as f:
                 content = f.read()
             exec(compile(content, cur_file, "exec"), module.__dict__)
             for name in fromlist:  # noqa: PLR1704
@@ -96,7 +98,7 @@ def _filepath_to_name(path: str | pathlib.Path | os.PathLike) -> str | None:
     """
 
     configs_root = pathlib.Path("./configs").resolve()
-    path = iopathlib.locate(path).resolve()
+    path = expath.locate(path).resolve()
     try:
         name = "/".join((path.relative_to(configs_root).parent.as_posix(), path.stem))
     except Exception:
@@ -114,18 +116,68 @@ def _generate_packagename(path: str):
     return PATCH_PREFIX + str(uuid4())[:4] + "." + pathlib.Path(path).name
 
 
-def load(path: str | pathlib.Path | os.PathLike) -> DictConfig:
-    """Loads a configuration from a local source."""
-    import laco
-    import laco.keys
-    import laco.utils
+class LoadMode(enum.IntFlag):
+    """Flags to control the behavior of the load function."""
 
-    path = iopathlib.locate(path)
+    NO_CHECK = enum.auto()
+    """Do not check the syntax of the file before loading it."""
 
-    ext = os.path.splitext(path)[1]  # noqa: PTH122
+    NO_PARSE = enum.auto()
+    """Do not parse the path as a URL (overrides and fragment)."""
+
+    DEFAULT = 0
+    """Default behavior."""
+
+
+def load(
+    path: str | pathlib.Path | os.PathLike,
+    *args: str,
+    key: str | None = None,
+    mode: LoadMode | int = LoadMode.DEFAULT,
+) -> DictConfig:
+    """Loads a configuration from a local source.
+
+    Parameters
+    ----------
+    path
+        The path to the configuration file. If it is a string, then it will first
+        be parsed as an URL, where the query is used as overrides and the fragment
+        is a nested key to select from the loaded config.
+    *args
+        A list of overrides to apply after loading the config, or a dictionary of
+        strings to strings representing the key-value pairs of overrides.
+    key
+        Key to select from the loaded config after applying overrides.
+        If None, the entire config is returned.
+    flags
+        Flags to control the behavior of the function. See :class:`LoadMode` for
+        more details.
+
+    Returns
+    -------
+    DictConfig
+        The loaded configuration as a DictConfig object.
+    """
+    from laco import __version__
+
+    if isinstance(path, str) and not (mode & LoadMode.NO_PARSE):
+        url = urlparse(path)
+        if len(url.query) > 0:
+            args = args + tuple(url.query.split("&"))
+        if len(url.fragment) > 0:
+            if key is not None:
+                msg = "Cannot specify both key and fragment in the URL."
+                raise ValueError(msg)
+            key = url.fragment
+        url = url._replace(query="", fragment="")
+        path = url.geturl()
+        ext = os.path.splitext(url.path)[1]  # noqa: PTH122
+    else:
+        ext = os.path.splitext(path)[1]  # noqa: PTH122
     match ext.lower():
         case ".py":
-            laco.utils.check_syntax(path)
+            if not (mode & LoadMode.NO_CHECK):
+                utils.check_syntax(path)
 
             with _patch_import():
                 # Record the filename
@@ -133,12 +185,12 @@ def load(path: str | pathlib.Path | os.PathLike) -> DictConfig:
                     "__file__": path,
                     "__package__": _generate_packagename(path),
                 }
-                with iopathlib.open(path) as f:
+                with expath.open(path) as f:
                     content = f.read()
                 # Compile first with filename to:
                 # 1. make filename appears in stacktrace
                 # 2. make load_rel able to find its parent's (possibly remote) location
-                exec(compile(content, iopathlib.locate(path), "exec"), nsp)
+                exec(compile(content, expath.locate(path), "exec"), nsp)
 
             export = nsp.get(
                 "__all__",
@@ -168,19 +220,26 @@ def load(path: str | pathlib.Path | os.PathLike) -> DictConfig:
                 for k, v in nsp.items()
                 if k in export
             }
-            obj.setdefault(laco.keys.CONFIG_NAME, _filepath_to_name(path))
-            obj.setdefault(laco.keys.CONFIG_VERSION, laco.__version__)
+            obj.setdefault(keys.CONFIG_NAME, _filepath_to_name(path))
+            obj.setdefault(keys.CONFIG_VERSION, __version__)
 
         case ".yaml":
-            with iopathlib.open(path) as f:
+            with expath.open(path) as f:
                 obj = yaml.unsafe_load(f)
-            obj.setdefault(laco.keys.CONFIG_NAME, "unknown")
-            obj.setdefault(laco.keys.CONFIG_VERSION, "unknown")
+            obj.setdefault(keys.CONFIG_NAME, "unknown")
+            obj.setdefault(keys.CONFIG_VERSION, "unknown")
         case _:
             msg = "Unsupported file extension %s!"
             raise ValueError(msg, ext)
 
-    return laco.utils.as_omegadict(obj)
+    cfg = utils.as_omegadict(obj)
+    if len(args) > 0:
+        cfg = apply_overrides(cfg, args)
+    if key is not None:
+        cfg = OmegaConf.select(
+            cfg, key, throw_on_missing=True, throw_on_resolution_failure=True
+        )
+    return cfg
 
 
 @typing.overload
@@ -271,8 +330,21 @@ def dump(cfg: object, fh: io.StringIO | None = None) -> str | None:
     return dumped
 
 
+class SaveMode(enum.IntFlag):
+    """Flags to control the behavior of the save function."""
+
+    NO_RELOAD = enum.auto()
+    """Do not reload the file after saving."""
+
+    DEFAULT = 0
+    """Default behavior."""
+
+
 def save[ConfigType: object | DictConfig](
-    cfg: ConfigType, path: str | pathlib.Path | os.PathLike, *, reload: bool = True
+    config: ConfigType,
+    path: str | pathlib.Path | os.PathLike,
+    *,
+    mode: SaveMode | int = SaveMode.DEFAULT,
 ) -> ConfigType | DictConfig:
     """
     Save a config object to a yaml file.
@@ -283,8 +355,6 @@ def save[ConfigType: object | DictConfig](
         An omegaconf config object.
     path
         The file path to save the config file.
-    reload
-        If True, reload the file (for validation) after saving.
 
     Returns
     -------
@@ -297,8 +367,10 @@ def save[ConfigType: object | DictConfig](
     AssertionError
         If the config cannot be dumped or the post-save check fails.
     """
-    dumped = dump(cfg)
-    with iopathlib.open(path, "w") as fh:  # noqa: PTH123
+    dumped = dump(config)
+    with expath.open(path, "w") as fh:  # noqa: PTH123
         fh.write(dumped)
 
-    return load(path) if reload else cfg
+    if mode & SaveMode.NO_RELOAD:
+        return config
+    return load(path)

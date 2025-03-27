@@ -9,7 +9,7 @@ import laco.utils
 def partial(
     **kwargs: typing.Any,
 ) -> typing.Callable[..., typing.Any]:
-    cb = kwargs.get(laco.keys.LAZY_PART, None)
+    cb = kwargs.pop(laco.keys.LAZY_PART)
     if isinstance(cb, str):
         cb = laco.utils.locate_object(cb)
     if not callable(cb):
@@ -17,11 +17,9 @@ def partial(
         raise TypeError(msg)
     return functools.partial(cb, **kwargs)
 
-def repeat[_O: typing.MutableSequence](num: int, src: _O) -> _O:
+
+def repeat[_O](num: int, src: _O) -> list[_O]:
     dst: list[_O] = []
     for _ in range(num):
         dst.append(copy.deepcopy(src))
-    tgt, *other = dst
-    for mod in other:
-        tgt.append(mod)
-    return tgt
+    return dst

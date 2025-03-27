@@ -1,9 +1,11 @@
+import typing
 
-from omegaconf import OmegaConf
+from omegaconf import DictConfig, OmegaConf
 
 __all__ = ["apply_overrides"]
 
-def apply_overrides(cfg, overrides: list[str]):
+
+def apply_overrides(cfg: DictConfig, overrides: typing.Iterable[str]) -> DictConfig:
     """
     In-place override contents of cfg.
 
@@ -26,6 +28,8 @@ def apply_overrides(cfg, overrides: list[str]):
     except ImportError as err:
         msg = "Hydra is not installed. Please install Hydra to use this function."
         raise ImportError(msg) from err
+
+    overrides = list(overrides)
 
     def safe_update(cfg, key, value):
         parts = key.split(".")

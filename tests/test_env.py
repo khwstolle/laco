@@ -2,7 +2,7 @@ import os
 from math import isnan
 
 import pytest
-from laco._env import get_env, strtobool, EnvFilter
+from laco._env import EnvFilter, get_env, strtobool
 
 
 @pytest.mark.parametrize(
@@ -113,7 +113,7 @@ def test_envfilter_apply_truthy():
 def test_envfilter_apply_falsy():
     assert EnvFilter.apply(EnvFilter.FALSY, 0.0) is True
     assert EnvFilter.apply(EnvFilter.FALSY, 1) is False
-    assert EnvFilter.apply(EnvFilter.FALSY, None) is False 
+    assert EnvFilter.apply(EnvFilter.FALSY, None) is False
 
 
 def test_envfilter_apply_positive():
