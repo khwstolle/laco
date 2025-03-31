@@ -15,5 +15,5 @@ LAZY_ARGS: typing.Final[str] = LazyKey.ARGS.value
 LAZY_PART: typing.Final[str] = LazyKey.PARTIAL.value
 
 # Configuration root keys
-CONFIG_VERSION: typing.Final[str] = "VERSION"
-CONFIG_NAME: typing.Final[str] = "NAME"
+CONFIG_VERSION: typing.Final[str] = "version"
+CONFIG_NAME: typing.Final[str] = "name"
