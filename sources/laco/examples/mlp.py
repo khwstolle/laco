@@ -15,7 +15,7 @@ class hps:
     activation: type[nn.Module] = nn.ReLU
 
 
-model = L.bind(nn.Sequential)(
+model = L.call(nn.Sequential, root=True)(
     L.OrderedDict(
         (
             "input",

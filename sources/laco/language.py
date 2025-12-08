@@ -1,3 +1,4 @@
+import inspect
 import abc
 import collections
 import functools
@@ -12,9 +13,10 @@ from omegaconf import DictConfig
 
 from laco import ops
 
+from typing import overload, Literal
+
 __all__ = [
     "call",
-    "bind",
     "node",
     "ref",
     "partial",
@@ -31,12 +33,36 @@ __all__ = [
 # --------------- #
 
 
+@overload
 def call[**_P, _L](
     target: Callable[_P, _L],
     *,
     reserved_ok: typing.Collection[str] = (),
     expand_args: bool = False,
-) -> Callable[_P, _L]:
+    include_defaults: bool = False,
+    root: Literal[True],
+) -> Callable[_P, omegaconf.DictConfig]: ...
+
+
+@overload
+def call[**_P, _L](
+    target: Callable[_P, _L],
+    *,
+    reserved_ok: typing.Collection[str] = (),
+    expand_args: bool = False,
+    include_defaults: bool = False,
+    root: Literal[False] = False,
+) -> Callable[_P, _L]: ...
+
+
+def call[**_P, _L](
+    target: Callable[_P, _L],
+    *,
+    reserved_ok: typing.Collection[str] = (),
+    expand_args: bool = False,
+    include_defaults: bool = False,
+    root: bool = False,
+) -> Callable[_P, _L] | Callable[_P, omegaconf.DictConfig]:
     r"""Peform a lazy call to a function or class.
 
     Parameters
@@ -49,6 +75,11 @@ def call[**_P, _L](
         Whether to expand the first positional argument as *args. If True, only one
         positional argument is allowed, and it will be expanded as *args. If False, the
         first and second positional arguments are passed as *args.
+    include_defaults : bool
+        Whether to include default values of the target function into the configuration.
+    root: bool
+        If True, the returned callable will be typed as returning a `DictConfig`, which
+        is useful for defining the root of a configuration tree.
     """
     import laco.keys
     import laco.utils
@@ -67,8 +98,26 @@ def call[**_P, _L](
             raise ValueError(msg)
 
         node = {}
-        if is_dataclass(target):
-            node[laco.keys.LAZY_CALL] = laco.utils.generate_path(target)
+
+        if include_defaults:
+            if callable(target):
+                signature = inspect.signature(target)
+                for name, parameter in signature.parameters.items():
+                    if parameter.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD and parameter.default is not inspect.Parameter.empty:
+                        node[name] = parameter.default
+            else:
+                warnings.warn(f"Cannot include defaults for non-callable target: {target}", stacklevel=2)
+
+        if callable(target):
+            try:
+                node[laco.keys.LAZY_CALL] = laco.utils.generate_path(target)
+            except ImportError:
+                node[laco.keys.LAZY_CALL] = target
+        elif is_dataclass(target): # Keep this for dataclasses that might not be directly callable but need path generation
+            try:
+                node[laco.keys.LAZY_CALL] = laco.utils.generate_path(target)
+            except ImportError:
+                node[laco.keys.LAZY_CALL] = target
         else:
             node[laco.keys.LAZY_CALL] = target
         if args and len(args) > 0:
@@ -89,16 +138,6 @@ def call[**_P, _L](
         return laco.utils.as_omegadict(node)
 
     return wrap
-
-
-def bind[**_P, _R](func: Callable[_P, _R], /) -> Callable[_P, omegaconf.DictConfig]:
-    """
-    Wrapper around call with type hints that support use in OmegaConf's structured
-    configuration system.
-
-    Primary use is the definition of root nodes that are also lazy calls.
-    """
-    return call(func)  # type: ignore[no-any-return]
 
 
 def pairs(

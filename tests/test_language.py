@@ -14,7 +14,7 @@ def test_language_call(value):
 
     assert isinstance(lc, O.DictConfig), type(lc)
     assert lc.value == value
-    assert lc[laco.keys.LAZY_CALL] is target_callable, lc
+    assert lc[laco.keys.LAZY_CALL] == "test_language.target_callable", lc
 
 
 @pytest.mark.parametrize("value", [True, False, None, 1, 1.0, "foo"])
@@ -22,5 +22,5 @@ def test_language_partial(value):
     lc = L.partial(target_callable)()
 
     assert isinstance(lc, O.DictConfig), type(lc)
-    assert lc[laco.keys.LAZY_CALL] is laco.ops.partial, lc
+    assert lc[laco.keys.LAZY_CALL] == "laco.ops.partial", lc
     assert lc[laco.keys.LAZY_PART] is target_callable, lc
