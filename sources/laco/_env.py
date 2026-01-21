@@ -83,9 +83,7 @@ def get_env[_T: EnvVarCompatible](
 
     If no default is given, an error is raised if the variable is not set.
     """
-    keys_read = []
     for k in keys:
-        keys_read.append(k)
         v = os.getenv(k)
         if v is None:
             continue
