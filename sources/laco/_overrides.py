@@ -1,5 +1,6 @@
 import typing
 
+import omegaconf
 from omegaconf import DictConfig, OmegaConf
 
 __all__ = ["apply_overrides"]
@@ -50,8 +51,22 @@ def apply_overrides(cfg: DictConfig, overrides: typing.Iterable[str]) -> DictCon
         key = o.key_or_group
         value = o.value()
         if o.is_delete():
-            msg = "deletion is not yet a supported override"
-            raise NotImplementedError(msg)
-        safe_update(cfg, key, value)
+            parts = key.split(".")
+            if len(parts) == 1:
+                if key in cfg:
+                    del cfg[key]
+                continue
+
+            parent_key = ".".join(parts[:-1])
+            try:
+                parent = OmegaConf.select(cfg, parent_key, throw_on_missing=True)
+            except omegaconf.errors.ConfigKeyError:
+                continue
+
+            child_key = parts[-1]
+            if isinstance(parent, omegaconf.Container) and child_key in parent:
+                del parent[child_key]
+        else:
+            safe_update(cfg, key, value)
 
     return cfg
