@@ -19,7 +19,4 @@ def partial(
 
 
 def repeat[_O](num: int, src: _O) -> list[_O]:
-    dst: list[_O] = []
-    for _ in range(num):
-        dst.append(copy.deepcopy(src))
-    return dst
+    return [copy.deepcopy(src) for _ in range(num)]
