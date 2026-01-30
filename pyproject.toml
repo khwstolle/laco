@@ -14,7 +14,7 @@ keywords = [
 name = "laco"
 description = "Lazy configurations for reproducible deep learning experiments."
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12, <3.14"
 authors = [{ name = "Kurt Stolle", email = "kurt@khws.io" }]
 classifiers = [
     "Development Status :: 4 - Beta",
