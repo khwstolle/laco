@@ -6,6 +6,7 @@ General utilities.
 """
 
 import ast
+import functools
 import importlib
 import pydoc
 import types
@@ -96,6 +97,7 @@ def generate_path(obj: typing.Any) -> str:
     return path
 
 
+@functools.lru_cache(maxsize=4096)
 def locate_object(path: str) -> typing.Any:  # noqa: C901
     """
     Dynamically locates and returns an object by its fully qualified name.
